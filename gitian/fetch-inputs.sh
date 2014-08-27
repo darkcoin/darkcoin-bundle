@@ -114,7 +114,7 @@ update_git() {
 # Get package files from mirror
 
 # Get+verify sigs that exist
-for i in OPENSSL # OBFSPROXY
+for i in OPENSSL
 do
   PACKAGE="${i}_PACKAGE"
   URL="${MIRROR_URL}${!PACKAGE}"
@@ -128,6 +128,31 @@ do
     exit 1
   fi
 done
+
+
+
+# Verify packages with weak or no signatures via multipath downloads
+# (OpenSSL is signed with MD5, and OSXSDK is not signed at all)
+# XXX: Google won't allow wget -N.. We need to re-download the whole
+# TOOLCHAIN4 each time. Rely only on SHA256 for now..
+mkdir -p verify
+cd verify
+for i in OPENSSL
+do
+  URL="${i}_URL"
+  PACKAGE="${i}_PACKAGE"
+  if ! wget -U "" -N --no-remove-listing "${!URL}"; then
+    echo "$i url ${!URL} is broken!"
+    mv "${!PACKAGE}" "${!PACKAGE}.removed"
+    exit 1
+  fi
+  if ! diff "${!PACKAGE}" "../${!PACKAGE}"; then
+    echo "Package ${!PACKAGE} differs from our mirror's version!"
+    exit 1
+  fi
+done
+
+cd ..
 
 
 exit 0
